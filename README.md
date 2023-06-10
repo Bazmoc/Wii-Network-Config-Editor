@@ -10,7 +10,7 @@ This program is a Wifi settings editor designed especially for Portable Wiis tha
 
 However it works fine with normal Wii's also (if you are too lazy to go to the wii menu or you can't access it for some reason).
 
-This program changes the SSID, Password, and security type of the network configuration file called "config.dat" located at /shared2/sys/net/02/config.dat on the NAND.
+This program changes the SSID, Password, and security type of the network configuration file named "config.dat" located at /shared2/sys/net/02/config.dat on the NAND.
 
 This program has been tested on both Dolphin and 2 real Wiis (hundreds of times) without any issues.
 	
