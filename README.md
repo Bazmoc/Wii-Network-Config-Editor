@@ -16,5 +16,7 @@ This program has been tested on both Dolphin and 2 real Wiis (hundreds of times)
 	
 	
 Thanks to Fix94 for his "simple Cert.sys extractor" which inspired me for the ISFS reading part.
-Thanks to Aurelio for helping me out for the **numerous** issues i had with my program.
-Thanks to Supertazon for helping me out for the sound effects and GRRLIB.
+
+Also thanks to Aurelio for helping me out for the **numerous** issues i had with my program.
+
+Also thanks to Supertazon for helping me out for the sound effects and GRRLIB.
