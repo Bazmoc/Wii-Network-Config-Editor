@@ -1,5 +1,5 @@
 # Wii-Network-Config-Editor
-This Wii homebrew program allows you to change your Wifi Settings without going to the Wii Menu. Especially useful for portable consoles.
+This Wii homebrew program allows you to change your Wifi Settings without going to the Wii Menu. Especially useful for portable consoles that haven't got a bluetooth module.
 
 WARNING : This program makes permanent changes to the NAND, use (and/or modify) at your own risks.
 Please make a NAND Backup before using my program, just in case.
