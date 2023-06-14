@@ -12,11 +12,3 @@ However it works fine with normal Wii's also (if you are too lazy to go to the w
 
 This program changes the SSID, Password, and security type of the network configuration file named "config.dat" located at /shared2/sys/net/02/config.dat on the NAND.
 
-This program has been tested on both Dolphin and 2 real Wiis (hundreds of times) without any issues.
-	
-	
-Thanks to Fix94 for his "simple Cert.sys extractor" which inspired me for the ISFS reading part.
-
-Also thanks to Aurelio for helping me out for the **numerous** issues i had with my program.
-
-Also thanks to Supertazon for helping me out for the sound effects and GRRLIB.
