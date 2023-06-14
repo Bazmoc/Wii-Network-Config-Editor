@@ -4,7 +4,7 @@ This Wii homebrew program allows you to change your Wifi Settings without going 
 WARNING : This program makes permanent changes to the NAND, use (and/or modify) at your own risks.
 Please make a NAND Backup before using my program, just in case.
 
-What is this program and what it does:
+##What is this program and what it does:
 
 This program is a Wifi settings editor designed especially for Portable Wiis that cannot access the Wii menu to change Network settings.
 
