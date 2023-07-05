@@ -17,4 +17,4 @@ void hoversound(){ASND_SetVoice(track, VOICE_STEREO_16BIT, 44100, 0, hoverkey_so
 void maxsound(){ASND_SetVoice(track, VOICE_STEREO_16BIT, 44100, 0, maxkey_sound, maxkey_sound_size, 255, 255, NULL);}
 void presssound(){ASND_SetVoice(track, VOICE_STEREO_16BIT, 44100, 0, presskey_sound, presskey_sound_size, 255, 255, NULL);}
 void capssound(){ASND_SetVoice(track, VOICE_STEREO_16BIT, 32000, 0, caps_sound, caps_sound_size, 255, 255, NULL);}
-void selectsound(){ASND_SetVoice(track, VOICE_STEREO_16BIT, 32000, 0, selectbutton_sound, selectbutton_sound_size, 255, 255, NULL);}
+void selectsound(){ASND_SetVoice(track, VOICE_STEREO_16BIT, 32000, 0, selectbutton_sound, selectbutton_sound_size, 100, 100, NULL);} //100,100 is the volume, this sound effect is loud so i reduced the audio level

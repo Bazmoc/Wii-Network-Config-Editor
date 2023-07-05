@@ -10,8 +10,6 @@ Thanks to Fix94 for sharing w/ me the source code of "simple Cert.sys extractor"
 Also thanks to Aurelio for helping me out for the **numerous** issues i had with my program.
 
 Also thanks to Supertazon for helping me out for the sound effects and GRRLIB.
-
-Some textures are from Usb loader GX.
 */
 
 #include <gccore.h>
@@ -100,9 +98,6 @@ int mainmenubt2CoordY = button2CoordY-60;
 
 int mainmenubt3CoordX = button3CoordX;
 int mainmenubt3CoordY = button3CoordY-60;
-
-int creditbtnCoordX = button3CoordX;
-int creditbtnCoordY = button3CoordY+45;
 //
 #include "security_menu_buttons.h"
 
@@ -113,7 +108,6 @@ int exitCoordY = 25;
 
 #include "gfx/backgrounds/blank_kbd.h"
 #include "gfx/backgrounds/settings_background.h"
-#include "gfx/backgrounds/credits_bg.h"
 
 
 #include "keyboard_texture_coords.h" //contains all the button's coordinates (x+y) and the #include's
@@ -151,7 +145,6 @@ void updatecursorpos(){
 		if (data->ir.valid) {
 			cursor_positionX = (int)ir1.x;
 			cursor_positionY = (int)ir1.y;
-			//CURSOR ROTATION FUNCTION WAS TEMPORARLY REMOVED BECAUSE IT CREATED ISSUES.
 			//cursor_rotation_angle = (int)ir1.angle; //ir1.angle is a float so we convert it to an int
 		} else {
 			cursor_rotation_angle = 0; //resets the angle from the wiimote
@@ -162,29 +155,6 @@ void updatecursorpos(){
 				}
 			}
 			
-			
-			//wiimote nunchuck stick:
-			expansion_t e;
-			int nx;
-			int ny;
-
-			WPAD_Expansion(WPAD_CHAN_0, &e);
-			if(e.type == WPAD_EXP_NUNCHUK) //if the thing that's plugged in the wiimote port is a nunchuck
-			{
-				nx = e.nunchuk.js.pos.x - e.nunchuk.js.center.x;
-				ny = e.nunchuk.js.pos.y - e.nunchuk.js.center.y;
-			} else {
-				nx=0;
-				ny=0;
-			}
-			
-			
-			if (ny > threshold || ny < -threshold ||nx > threshold ||nx < -threshold){
-				if (cursor_positionX+(nx/sensitivity) >=0 && cursor_positionX+(nx/sensitivity) <=640 && cursor_positionY-(ny/sensitivity) >= 0 && cursor_positionY-(ny/sensitivity) <= 480){ //makes sure the cursor never leaves the screen when using the nunchuck stick
-							cursor_positionX = cursor_positionX+(nx/sensitivity);
-							cursor_positionY = cursor_positionY-(ny/sensitivity); //minus needed or the controls are inversed.
-				}
-			}
 		}	
 		
 }
@@ -423,86 +393,13 @@ void clearkeyboard(int kbd){ //1 = ssid keyboard, 2=password keyboard
 
 
 
-//this small function manages the backspace function. needed for the wiimote's B button, GC controller B button, and the 2 graphical keyboard's backspace buttons.
 
-void kbd_backspace(int keyboard_type){//keyboard_type : 0= SSID keyboard | 1=Password keyboard
-
-	if (keyboard_type == 0){
-		if (SSID_indexkeyboard>0 ) { //you don't want that number to get negative lol 		
-			SSIDkeyboard_writtentext[SSID_indexkeyboard-1] = '\0'; //erases the character
-			SSID_indexkeyboard-=1;
-			erasesound();
-		} else maxsound();
-		
-	} else{ //must be 1 if it's not 0, right?
-		if (Password_indexkeyboard>0 ) { //you don't want that number to get negative lol 		
-			Passwordkeyboard_writtentext[Password_indexkeyboard-1] = '\0'; //erases the character
-			Password_indexkeyboard-=1;
-			erasesound();
-			}else maxsound();
-	}
-	
-	wiirumble_set(0,vib_duration2);
-}
-
-
-
-
-//this small function tests if your wifi works.
-s32 WIFI_CONNECTION_TEST(){ //false=couldn't connect, true = working
-	char ip_address[16]="";
-    char network_mask[16]="";
-    char network_gateaway[16]="";
-
-    s32 error=if_config(ip_address,network_mask,network_gateaway,true,10);
-
-    /*if(error<0) //error when negative, as always
-    {
-	return false;
-    }
-    else //connected:
-    {
-	return true;
-    }*/
-	return error;
-}
-
-
-
-
-
-
-char shortenedssid[33];
-char shortenedpassword[64];
-
-int connection1_newsecuritytype;
-
-int isWifiWorking = 0; //0 = the user didn't even click on 'test connection'; 1=user clicked on 'test connection' but the wifi isnt working; and 2= the user clicked and the wifi works.
-
-
-//those float values define the text's size on the keyboards.
-float SSIDkbd_zoom = 1.5;
-float passwordkbd_zoom = 1.5;
-
-
-/*char password_firstline[45];
-char password_secondline[32-45]; //63= max length of password
-*/
-
-char password_firstline[45];
-char password_secondline[63-45]; //63= max length of password
-
-
-//this float variable determines the on-screen keyboard's key sizes.
-float kbd_button_Xsize = 1.0;
-float kbd_button_Ysize = 1.0;
-
-//main function:
 int main() {
 		wiirumble_init();
 
 			char SSID1[32];
 			char PASSWORD1[63];//from index 0 to 62 = password(password max 63chars long) | character 63 is the terminating character \0
+			//char WIFI_type; 
 			
     GRRLIB_Init();
 	
@@ -521,9 +418,6 @@ int main() {
 	GRRLIB_texImg *tex_settings_background_png = GRRLIB_LoadTexture(settings_background);
     GRRLIB_InitTileSet(tex_settings_background_png, 640, 480, 0); 
 	
-	GRRLIB_texImg *tex_credits_bg_png = GRRLIB_LoadTexture(credits_bg);
-    GRRLIB_InitTileSet(tex_credits_bg_png, 640, 480, 0); 
-
     GRRLIB_texImg *tex_BMfont1 = GRRLIB_LoadTexture(BMfont1);
     GRRLIB_InitTileSet(tex_BMfont1, 32, 32, 32);
 	
@@ -884,8 +778,6 @@ int main() {
 				GRRLIB_DrawImg(mainmenubt1CoordX, mainmenubt1CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE); //button 1
 				GRRLIB_DrawImg(mainmenubt2CoordX, mainmenubt2CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE); //button 2
 				GRRLIB_DrawImg(mainmenubt3CoordX, mainmenubt3CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE); //button 3
-				GRRLIB_DrawImg(creditbtnCoordX, creditbtnCoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE); //credit button
-				
 				
 				GRRLIB_DrawImg(exitCoordX, exitCoordY, tex_poweroff_png, 0, 1, 1, GRRLIB_WHITE); //exit button (goes back to HBC)
 				
@@ -893,19 +785,21 @@ int main() {
 				GRRLIB_Printf((mainmenubt1CoordX+buttonWidth/2)-35, (mainmenubt1CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1 , "Edit SSID");
 				GRRLIB_Printf((mainmenubt2CoordX+buttonWidth/2)-50, (mainmenubt2CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1 , "Edit Password");
 				GRRLIB_Printf((mainmenubt3CoordX+buttonWidth/2)-70, (mainmenubt3CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1 , "Edit Security type");
-				GRRLIB_Printf((creditbtnCoordX+buttonWidth/2)-25, (creditbtnCoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1 , "Credits");
 				
 				
 				GRRLIB_Printf(exitCoordX-15, exitCoordY+45, tex_BMfont5, GRRLIB_WHITE, 0.8, "Save and Exit"); //exit button
 
-				GRRLIB_Printf(200, 45, tex_BMfont5, GRRLIB_BLACK,1 ,"Wii Network Config Editor by Bazmoc"); //title
+				GRRLIB_Printf(200, 40, tex_BMfont5, GRRLIB_BLACK,1 ,"Network Settings"); //title
 				
+				
+				//GRRLIB_Printf(15, 25, tex_BMfont5, GRRLIB_WHITE, 1, "IR.x : %d Ir.y : %d", (int)ir1.x, (int)ir1.y);
+				GRRLIB_Printf(15, 25, tex_BMfont5, GRRLIB_WHITE, 1, "IR.angle %f", ir1.angle);
 				
 				GRRLIB_Printf(mainmenubt1CoordX, 280, tex_BMfont5, GRRLIB_WHITE, 1, "SSID : ");
 				
 				//this part shortens the SSID if it's too long and adds "..." so that SSID and password don't overlap on the screen:
 				int shorten_length = 20;
-				
+				char shortenedssid[33];
 				strcpy(shortenedssid, SSID1);
 				
 				if(strlen(shortenedssid) >= shorten_length) {
@@ -915,7 +809,7 @@ int main() {
 					shortenedssid[shorten_length+3] = '\0';
 				}
 				
-				
+				char shortenedpassword[64];
 				strcpy(shortenedpassword, PASSWORD1);
 				
 				if(strlen(shortenedpassword) >= shorten_length) {
@@ -963,29 +857,19 @@ int main() {
 					if (collisionButton(mainmenubt3CoordX, mainmenubt3CoordY, cursor_positionX,cursor_positionY) == true){
 						buttonsound1();
 						wiirumble_set(0,vib_duration1);
-						connection1_newsecuritytype = connection1_securitytype;
 						goto securitymenu;
 					}
 					if (collisionButton(exitCoordX, exitCoordY, cursor_positionX,cursor_positionY) == true){ //exit button
-						buttonsound1();
-						wiirumble_set(0,vib_duration1);
-						isWifiWorking = 0;
-						goto confirmchanges;
+						ISFS_Deinitialize();
+						ASND_End();
+						//free(certBuffer); causes crash. need to fix
+						exit(0);
 					}
-					if (collisionButton(creditbtnCoordX, creditbtnCoordY, cursor_positionX,cursor_positionY) == true){ //exit button
-						buttonsound1();
-						wiirumble_set(0,vib_duration1);
-						goto credits;
-					}
-					
 				}
-				
-				if(wpaddown & WPAD_BUTTON_HOME || paddown & PAD_BUTTON_START ) goto confirmchanges; //if you clicked HOME or START : save changes.
-
         GRRLIB_Render();
 	}
 	
-	///////////////////////////////////Keyboard for SSID://////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	SSIDkeyboard:
     while(1) { //keyboard for SSID. max 32 characters
@@ -994,108 +878,102 @@ int main() {
 				GRRLIB_DrawImg(0, 0, tex_blank_kbd_png, 0, 1, 1, GRRLIB_WHITE);  //shows the keyboard on screen
 
 					//draw numbers:
-				GRRLIB_DrawImg(one_coordX, one_coordY, tex_one_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(two_coordX, two_coordY, tex_two_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(three_coordX, three_coordY, tex_three_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(four_coordX, four_coordY, tex_four_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(five_coordX, five_coordY, tex_five_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(six_coordX, six_coordY, tex_six_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(seven_coordX, seven_coordY, tex_seven_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(eight_coordX, eight_coordY, tex_eight_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(nine_coordX, nine_coordY, tex_nine_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(zero_coordX, zero_coordY, tex_zero_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(dash_coordX, dash_coordY, tex_dash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+				GRRLIB_DrawImg(one_coordX, one_coordY, tex_one_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(two_coordX, two_coordY, tex_two_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(three_coordX, three_coordY, tex_three_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(four_coordX, four_coordY, tex_four_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(five_coordX, five_coordY, tex_five_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(six_coordX, six_coordY, tex_six_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(seven_coordX, seven_coordY, tex_seven_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(eight_coordX, eight_coordY, tex_eight_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(nine_coordX, nine_coordY, tex_nine_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(zero_coordX, zero_coordY, tex_zero_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(dash_coordX, dash_coordY, tex_dash_png, 0, 1, 1, GRRLIB_WHITE);
 				
 				//draw letters:
 				if (SSID_uppercase==false){ //lowercase letters:
-					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_png, 0, 1, 1, GRRLIB_WHITE);
 				}else{//uppercase letters:
-					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_UP_png, 0, 1, 1, GRRLIB_WHITE);
 				}
 
 
 
 				//other characters and stuff:
 				if (SSID_uppercase==true){
-					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_colored_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE); //show the yellow-colored CAPS button when uppercase==true
+					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_colored_png, 0, 1, 1, GRRLIB_WHITE); //show the yellow-colored CAPS button when uppercase==true
 				}else{
-					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE); //else:show the normal one
+					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_png, 0, 1, 1, GRRLIB_WHITE); //else:show the normal one
 				}
 
-				GRRLIB_DrawImg(erase_coordX, erase_coordY, tex_erase_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(space_coordX, space_coordY, tex_space_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				//GRRLIB_DrawImg(yen_coordX, yen_coordY, tex_yen_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				//GRRLIB_DrawImg(euro_coordX, euro_coordY, tex_euro_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(bracket_1_coordX, bracket_1_coordY, tex_bracket_1_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(bracket_2_coordX, bracket_2_coordY, tex_bracket_2_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(backslash_coordX, backslash_coordY, tex_backslash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(slash_coordX, slash_coordY, tex_slash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(apostrophe_coordX, apostrophe_coordY, tex_apostrophe_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(hash_coordX, hash_coordY, tex_hash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(comma_coordX, comma_coordY, tex_comma_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(point_coordX, point_coordY, tex_point_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(equal_coordX, equal_coordY, tex_equal_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(semicolon_coordX, semicolon_coordY, tex_semicolon_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+				GRRLIB_DrawImg(erase_coordX, erase_coordY, tex_erase_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(space_coordX, space_coordY, tex_space_png, 0, 1, 1, GRRLIB_WHITE);
+				//GRRLIB_DrawImg(yen_coordX, yen_coordY, tex_yen_png, 0, 1, 1, GRRLIB_WHITE);
+				//GRRLIB_DrawImg(euro_coordX, euro_coordY, tex_euro_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(bracket_1_coordX, bracket_1_coordY, tex_bracket_1_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(bracket_2_coordX, bracket_2_coordY, tex_bracket_2_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(backslash_coordX, backslash_coordY, tex_backslash_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(slash_coordX, slash_coordY, tex_slash_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(apostrophe_coordX, apostrophe_coordY, tex_apostrophe_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(hash_coordX, hash_coordY, tex_hash_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(comma_coordX, comma_coordY, tex_comma_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(point_coordX, point_coordY, tex_point_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(equal_coordX, equal_coordY, tex_equal_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(semicolon_coordX, semicolon_coordY, tex_semicolon_png, 0, 1, 1, GRRLIB_WHITE);
 	
 				
 				
-                GRRLIB_Printf(35, 50, tex_BMfont5, GRRLIB_BLACK, SSIDkbd_zoom, SSIDkeyboard_writtentext); //write on the screen the text that is being written
-				
-				
-				
-				
-				
-				
+                GRRLIB_Printf(35, 50, tex_BMfont5, GRRLIB_BLACK, 1.5, SSIDkeyboard_writtentext); //write on the screen the text that is being written
 				GRRLIB_DrawImg(button1CoordX, button1CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
 				GRRLIB_Printf((button1CoordX+buttonWidth/2)-20, (button1CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Save");
 				GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE);  // Draw a jpeg
@@ -1111,8 +989,6 @@ int main() {
 	
 	SSIDkeyboard_writtentext[33] = '\0';
 
-	if(wpaddown & WPAD_BUTTON_B || paddown & PAD_BUTTON_B) kbd_backspace(0); //erases last character when clicking B button on wiimote or gc controller
-		
 	if(wpaddown & WPAD_BUTTON_A || paddown & PAD_BUTTON_A) {
 		
 		
@@ -1451,13 +1327,12 @@ int main() {
 				capssound();
 				wiirumble_set(0,vib_duration2);
 		} else if(GRRLIB_RectOnRect(erase_coordX,erase_coordY,erase_width,erase_height,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-				/*if (SSID_indexkeyboard>0 ) { //you don't want that number to get negative lol 		
+				if (SSID_indexkeyboard>0 ) { //you don't want that number to get negative lol 		
 					SSIDkeyboard_writtentext[SSID_indexkeyboard-1] = '\0'; //erases the character
 					SSID_indexkeyboard-=1;
 					erasesound();
-				} else maxsound()
-			wiirumble_set(0,vib_duration2);	*/
-			kbd_backspace(0);			
+				} else maxsound();
+			wiirumble_set(0,vib_duration2);				
 			} else if(GRRLIB_RectOnRect(space_coordX,space_coordY,space_width,space_height,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
 				if (SSID_indexkeyboard<=31) { 
 					SSIDkeyboard_writtentext[SSID_indexkeyboard] = ' '; //space
@@ -1514,73 +1389,73 @@ int main() {
 				GRRLIB_DrawImg(0, 0, tex_blank_kbd_png, 0, 1, 1, GRRLIB_WHITE);  //shows the keyboard on screen
 
 					//draw numbers:
-				GRRLIB_DrawImg(one_coordX, one_coordY, tex_one_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(two_coordX, two_coordY, tex_two_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(three_coordX, three_coordY, tex_three_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(four_coordX, four_coordY, tex_four_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(five_coordX, five_coordY, tex_five_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(six_coordX, six_coordY, tex_six_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(seven_coordX, seven_coordY, tex_seven_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(eight_coordX, eight_coordY, tex_eight_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(nine_coordX, nine_coordY, tex_nine_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(zero_coordX, zero_coordY, tex_zero_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(dash_coordX, dash_coordY, tex_dash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+				GRRLIB_DrawImg(one_coordX, one_coordY, tex_one_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(two_coordX, two_coordY, tex_two_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(three_coordX, three_coordY, tex_three_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(four_coordX, four_coordY, tex_four_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(five_coordX, five_coordY, tex_five_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(six_coordX, six_coordY, tex_six_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(seven_coordX, seven_coordY, tex_seven_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(eight_coordX, eight_coordY, tex_eight_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(nine_coordX, nine_coordY, tex_nine_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(zero_coordX, zero_coordY, tex_zero_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(dash_coordX, dash_coordY, tex_dash_png, 0, 1, 1, GRRLIB_WHITE);
 				
 				//draw letters:
              	if (Password_uppercase==false){
-					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_png, 0, 1, 1, GRRLIB_WHITE);
 				}else{
-					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_UP_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btd_coordX, btd_coordY, tex_btd_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bte_coordX, bte_coordY, tex_bte_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btf_coordX, btf_coordY, tex_btf_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btg_coordX, btg_coordY, tex_btg_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bth_coordX, bth_coordY, tex_bth_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bti_coordX, bti_coordY, tex_bti_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btj_coordX, btj_coordY, tex_btj_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btk_coordX, btk_coordY, tex_btk_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btl_coordX, btl_coordY, tex_btl_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btm_coordX, btm_coordY, tex_btm_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btn_coordX, btn_coordY, tex_btn_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bto_coordX, bto_coordY, tex_bto_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btp_coordX, btp_coordY, tex_btp_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btq_coordX, btq_coordY, tex_btq_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btr_coordX, btr_coordY, tex_btr_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bts_coordX, bts_coordY, tex_bts_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btt_coordX, btt_coordY, tex_btt_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btu_coordX, btu_coordY, tex_btu_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btv_coordX, btv_coordY, tex_btv_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btw_coordX, btw_coordY, tex_btw_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btx_coordX, btx_coordY, tex_btx_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(bty_coordX, bty_coordY, tex_bty_UP_png, 0, 1, 1, GRRLIB_WHITE);
+					GRRLIB_DrawImg(btz_coordX, btz_coordY, tex_btz_UP_png, 0, 1, 1, GRRLIB_WHITE);
 				}
 				
 
@@ -1588,39 +1463,27 @@ int main() {
 
 				//other characters and stuff:
 				if (Password_uppercase==true){
-					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_colored_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE); //show the yellow-colored CAPS button when uppercase==true
+					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_colored_png, 0, 1, 1, GRRLIB_WHITE); //show the yellow-colored CAPS button when uppercase==true
 				}else{
-					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE); //else:show the normal one
+					GRRLIB_DrawImg(caps_coordX, caps_coordY, tex_caps_png, 0, 1, 1, GRRLIB_WHITE); //else:show the normal one
 				}
 
-				GRRLIB_DrawImg(erase_coordX, erase_coordY, tex_erase_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(space_coordX, space_coordY, tex_space_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(bracket_1_coordX, bracket_1_coordY, tex_bracket_1_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(bracket_2_coordX, bracket_2_coordY, tex_bracket_2_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(backslash_coordX, backslash_coordY, tex_backslash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(slash_coordX, slash_coordY, tex_slash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(apostrophe_coordX, apostrophe_coordY, tex_apostrophe_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(hash_coordX, hash_coordY, tex_hash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(comma_coordX, comma_coordY, tex_comma_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(point_coordX, point_coordY, tex_point_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(equal_coordX, equal_coordY, tex_equal_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				GRRLIB_DrawImg(semicolon_coordX, semicolon_coordY, tex_semicolon_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
-				
-				
-				//this small part splits passwordkeyboard_wirttentext into two lines when it reached 45 caracters.
-                GRRLIB_Printf(35, 50, tex_BMfont5, GRRLIB_BLACK, passwordkbd_zoom, password_firstline); //write on the screen the text that is being written
-				GRRLIB_Printf(35, 75, tex_BMfont5, GRRLIB_BLACK, passwordkbd_zoom, password_secondline); //write on the screen the text that is being written
-				if (Password_indexkeyboard>45) {
-					password_firstline[46] = '\0';
-					password_secondline[Password_indexkeyboard-46] = Passwordkeyboard_writtentext[Password_indexkeyboard-1];
-					password_secondline[1+Password_indexkeyboard-46] = '\0';
-				} else {
-					password_secondline[0] = '\0';
-					strncpy(password_firstline, Passwordkeyboard_writtentext, 45);
-				}
+				GRRLIB_DrawImg(erase_coordX, erase_coordY, tex_erase_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(space_coordX, space_coordY, tex_space_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(bracket_1_coordX, bracket_1_coordY, tex_bracket_1_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(bracket_2_coordX, bracket_2_coordY, tex_bracket_2_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(backslash_coordX, backslash_coordY, tex_backslash_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(slash_coordX, slash_coordY, tex_slash_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(apostrophe_coordX, apostrophe_coordY, tex_apostrophe_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(hash_coordX, hash_coordY, tex_hash_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(comma_coordX, comma_coordY, tex_comma_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(point_coordX, point_coordY, tex_point_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(equal_coordX, equal_coordY, tex_equal_png, 0, 1, 1, GRRLIB_WHITE);
+				GRRLIB_DrawImg(semicolon_coordX, semicolon_coordY, tex_semicolon_png, 0, 1, 1, GRRLIB_WHITE);
 				
 				
 				
+                GRRLIB_Printf(35, 50, tex_BMfont5, GRRLIB_BLACK, 1, Passwordkeyboard_writtentext); //write on the screen the text that is being written
 				GRRLIB_DrawImg(button1CoordX, button1CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
 				GRRLIB_Printf((button1CoordX+buttonWidth/2)-20, (button1CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Save");
 				GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE);  // Draw a jpeg
@@ -1635,8 +1498,6 @@ int main() {
 	int collision_sizey = 5;
 	
 	Passwordkeyboard_writtentext[64] = '\0';
-
-	if(wpaddown & WPAD_BUTTON_B || paddown & PAD_BUTTON_B) kbd_backspace(1); //erases last character when clicking B button on wiimote or gc controller
 
 	if(wpaddown & WPAD_BUTTON_A || paddown & PAD_BUTTON_A) {			
 		if(GRRLIB_RectOnRect(bta_coordX,bta_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
@@ -1899,70 +1760,70 @@ int main() {
 			} else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(bracket_1_coordX,bracket_1_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = '[';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(bracket_2_coordX,bracket_2_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = ']';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(backslash_coordX,backslash_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = '\\';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(slash_coordX,slash_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = '/';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(apostrophe_coordX,apostrophe_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = '\'';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(hash_coordX,hash_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = '#';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(comma_coordX,comma_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = ',';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(point_coordX,point_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = '.';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(equal_coordX,equal_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = '=';
 				Password_indexkeyboard+=1;
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(semicolon_coordX,semicolon_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-			if (Password_indexkeyboard<=62) { 
+			if (Password_indexkeyboard<=31) { 
 				Passwordkeyboard_writtentext[Password_indexkeyboard] = ';';
 				Password_indexkeyboard+=1;
 				presssound();
@@ -1973,7 +1834,12 @@ int main() {
 				capssound();
 				wiirumble_set(0,vib_duration2);
 		} else if(GRRLIB_RectOnRect(erase_coordX,erase_coordY,erase_width,erase_height,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
-				kbd_backspace(1);//1=password keyboard				
+				if (Password_indexkeyboard>0 ) { //you don't want that number to get negative lol 		
+				Passwordkeyboard_writtentext[Password_indexkeyboard-1] = '\0'; //erases the character
+				Password_indexkeyboard-=1;
+				erasesound();
+				}else maxsound();
+				wiirumble_set(0,vib_duration2);				
 			} else if(GRRLIB_RectOnRect(space_coordX,space_coordY,space_width,space_height,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
 				if (Password_indexkeyboard<=62) { 
 					Passwordkeyboard_writtentext[Password_indexkeyboard] = ' '; //space
@@ -2023,16 +1889,19 @@ int main() {
 	
 ////////////////////////////////////////////////SECURITY MENU :////////////////////////////////////////////////////////////
 	securitymenu:
+	int connection1_newsecuritytype = connection1_securitytype;
 	while(1){
-
+	
 		
 		
 		updatecursorpos();
 	
 				GRRLIB_DrawImg(0, 0, tex_settings_background_png, 0, 1, 1, GRRLIB_WHITE);  //shows the keyboard on screen
 				
+                GRRLIB_Printf(35, 50, tex_BMfont5, GRRLIB_BLACK, 1, Passwordkeyboard_writtentext); //write on the screen the text that is being written
 				GRRLIB_DrawImg(button1CoordX, button1CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
 				GRRLIB_Printf((button1CoordX+buttonWidth/2)-20, (button1CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Save");
+				GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE);  
 				
 				//GRRLIB_Printf(15, 25, tex_BMfont5, GRRLIB_BLACK, 1, "IR.x : %d Ir.y : %d", (int)ir1.x, (int)ir1.y);
 					GRRLIB_Printf(200, 45, tex_BMfont5, GRRLIB_BLACK, 1, "Security Type"); //title
@@ -2128,113 +1997,4 @@ int main() {
 					
         GRRLIB_Render();
 	}
-	
-	
-	
-	/////////////////////////CONFIRM CHANGES MENU://///////////////////////
-	confirmchanges:
-	while(1){
-	
-		
-		
-		updatecursorpos();
-	
-		GRRLIB_DrawImg(0, 0, tex_settings_background_png, 0, 1, 1, GRRLIB_WHITE);  //shows the keyboard on screen
-				
-		GRRLIB_DrawImg(button1CoordX, button1CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
-		GRRLIB_Printf((button1CoordX+buttonWidth/2)-20, (button1CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Cancel");
-		
-		//GRRLIB_DrawImg(button2CoordX, button2CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
-		//GRRLIB_Printf((button2CoordX+buttonWidth/2)-60, (button2CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Connection test");
-				
-		GRRLIB_DrawImg(button3CoordX, button3CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
-		GRRLIB_Printf((button3CoordX+buttonWidth/2)-50, (button3CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Save and Exit");
-				
-				
-				
-		GRRLIB_Printf(250, 45, tex_BMfont5, GRRLIB_BLACK, 1, "Confirm changes?"); //title
-
-
-        GRRLIB_Printf(50, 100, tex_BMfont5, GRRLIB_WHITE, 1, "SSID : %s", shortenedssid); 
-		GRRLIB_Printf(50, 125, tex_BMfont5, GRRLIB_WHITE, 1, "Password : %s", shortenedpassword);
-		GRRLIB_Printf(50, 150, tex_BMfont5, GRRLIB_WHITE, 1, "Security type :");
-		
-		if(isWifiWorking == 1){
-		GRRLIB_Printf(50, 200, tex_BMfont5, GRRLIB_RED, 1, "Network test failed. Check SSID, Password and Security type.");
-		}
-		if(isWifiWorking == 2){
-			GRRLIB_Printf(50, 200, tex_BMfont5, GRRLIB_GREEN, 1, "Network test Successful!");
-		}
-
-		if (connection1_securitytype == 0x00){
-			GRRLIB_Printf(175, 150, tex_BMfont5, GRRLIB_WHITE, 1, "Open");
-		}else if (connection1_securitytype == 0x01){
-			GRRLIB_Printf(175, 150, tex_BMfont5, GRRLIB_WHITE, 1, "WEP64");
-		} else if (connection1_securitytype == 0x02){
-			GRRLIB_Printf(175, 150, tex_BMfont5, GRRLIB_WHITE, 1, "WEP128");
-		} else if (connection1_securitytype == 0x04){
-			GRRLIB_Printf(175, 150, tex_BMfont5, GRRLIB_WHITE, 1, "WPA-PSK(TKIP)");
-		} else if (connection1_securitytype == 0x05){
-			GRRLIB_Printf(175, 150, tex_BMfont5, GRRLIB_WHITE, 1, "WPA2-PSK(AES)");
-		} else if (connection1_securitytype == 0x06){
-			GRRLIB_Printf(175, 150, tex_BMfont5, GRRLIB_WHITE, 1, "WPA-PSK(AES)");
-		}
-				
-		GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE);  // shows cursor
-		
-		if(wpaddown & WPAD_BUTTON_A || paddown & PAD_BUTTON_A ) {
-			if (collisionButton(button1CoordX, button1CoordY, cursor_positionX,cursor_positionY) == true) goto mainmenu;
-			
-			if (collisionButton(button3CoordX, button3CoordY, cursor_positionX,cursor_positionY) == true){
-				ISFS_Deinitialize();
-				ASND_End();
-				//free(certBuffer); causes crash. need to fix
-				exit(0);
-			}
-			/*if (collisionButton(button2CoordX, button2CoordY, cursor_positionX,cursor_positionY) == true){
-				if(WIFI_CONNECTION_TEST()<0){isWifiWorking = 1;} else isWifiWorking=2;
-			}*/					
-
-		}
-					
-		
-		
-		
-		
-		
-        GRRLIB_Render();
-	}
-	
-	
-	
-	///////////////////////CREDITS MENU://////////////////////////////
-	
-	credits:
-	while(1){
-	
-		
-		updatecursorpos();
-	
-		GRRLIB_DrawImg(0, 0, tex_credits_bg_png, 0, 1, 1, GRRLIB_WHITE);  
-		
-		GRRLIB_Printf(280, 25, tex_BMfont5, GRRLIB_WHITE, 1.5, "Credits"); //title
-		
-		GRRLIB_Printf(50, 100, tex_BMfont5, GRRLIB_WHITE, 1, "Wii Network Config Editor v1.1 made by Bazmoc"); //title
-		GRRLIB_Printf(50, 125, tex_BMfont5, GRRLIB_WHITE, 1, "Download the latest versions at https://github.com/Bazmoc"); //title
-		GRRLIB_Printf(50, 150, tex_BMfont5, GRRLIB_WHITE, 1, "If you have any questions or issues contact me on discord : @bazmoc"); //title
-		GRRLIB_Printf(50, 200, tex_BMfont5, GRRLIB_WHITE, 1, "Press B to go back."); //title
-
-
-
-		GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE);  // shows cursor
-		
-		if(wpaddown & WPAD_BUTTON_B || paddown & PAD_BUTTON_B ) {
-			goto mainmenu;
-		}
-				
-		
-        GRRLIB_Render();
-	}
 }
-
-
