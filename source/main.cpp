@@ -2597,7 +2597,7 @@ if (CusorOnKey(bta_coordX,bta_coordY,44,36)==true){
 		
 		GRRLIB_Printf(280, 25, tex_BMfont5, GRRLIB_WHITE, 1.5, "Credits"); //title
 		
-		GRRLIB_Printf(50, 100, tex_BMfont5, GRRLIB_WHITE, 1, "Wii Network Config Editor v1.1 made by Bazmoc"); //title
+		GRRLIB_Printf(50, 100, tex_BMfont5, GRRLIB_WHITE, 1, "Wii Network Config Editor v1.2 made by Bazmoc"); //title
 		GRRLIB_Printf(50, 125, tex_BMfont5, GRRLIB_WHITE, 1, "Download the latest versions at https://github.com/Bazmoc"); //title
 		GRRLIB_Printf(50, 150, tex_BMfont5, GRRLIB_WHITE, 1, "If you have any questions or issues contact me on discord : @bazmoc"); //title
 		GRRLIB_Printf(50, 200, tex_BMfont5, GRRLIB_WHITE, 1, "Press B to go back."); //title
@@ -2606,7 +2606,7 @@ if (CusorOnKey(bta_coordX,bta_coordY,44,36)==true){
 
 		GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE);  // shows cursor
 		
-		if(wpaddown & WPAD_BUTTON_B || paddown & PAD_BUTTON_B ) {
+		if(wpaddown & WPAD_BUTTON_B || paddown & PAD_BUTTON_B ) { //if B wiimote or B gamecube :
 			goto mainmenu;
 		}
 				
