@@ -2,16 +2,18 @@
 
 //Wii Network Config Editor by Bazmoc (2023)
 
-This program has been tested on both Dolphin and 2 real Wiis (hundreds of times) without any issues.
-	
-	
+If you have questions contact me on discord : "Bazmoc"
+
+This program has been tested on both Dolphin and 2 real Wiis (hundreds of times :) ) without any issues.
+Please have a NAND backup before using my program. 
+
 Thanks to Fix94 for sharing w/ me the source code of "simple Cert.sys extractor" which inspired me for the ISFS reading part.
 
 Also thanks to Aurelio for helping me out for the **numerous** issues i had with my program.
 
 Also thanks to Supertazon for helping me out for the sound effects and GRRLIB.
 
-Some textures are from Usb loader GX.
+Some textures and sound effects are from Usb loader GX btw.
 */
 
 #include <gccore.h>
@@ -26,17 +28,16 @@ Some textures are from Usb loader GX.
 #include <locale.h>
 #include <wiiuse/wpad.h>
 #include <stdlib.h>
-
 #include <ogc/isfs.h>
 #include <fat.h>
 
 #include <network.h>
 #include <time.h>
 
-//file paths :
+//network configuration file path and length :
 #define ISFS_CONFIGDAT_PATH "/shared2/sys/net/02/config.dat"
-
 #define CONFIGDAT_FILELENGTH 7004
+
 
 //Which characters in the config.dat:
 int SSID1_pos=1996; //beginning of the first SSID's character
@@ -49,9 +50,11 @@ int connection3_selectpos = 8+2332+2332;
 
 int connection1_securitypos = 2033; //security type position (connection 1 only)
 
-char connection_selectedchar = 0xA6; //0xa6 = ª, i had to write it in hex cuz it would create issues otherwise..
-char connection_unselectedchar = '&';
+char connection_wireless_selectedchar = 0xA6; //A6 = wifi connection
+char connection_wired_selectedchar = 0xA7; //A7=wired connection
 
+char connection_wireless_unselectedchar = 0x26; //when a wifi connection isn't selected the character is 0x26
+char connection_wired_unselectedchar = 0x27; //same thing but for a wired connection
 
 #include <grrlib.h>
 #include <stdlib.h>
@@ -102,7 +105,7 @@ int mainmenubt3CoordX = button3CoordX;
 int mainmenubt3CoordY = button3CoordY-60;
 
 int creditbtnCoordX = button3CoordX;
-int creditbtnCoordY = button3CoordY+45;
+int creditbtnCoordY = button3CoordY+40;
 //
 #include "security_menu_buttons.h"
 
@@ -111,9 +114,7 @@ int creditbtnCoordY = button3CoordY+45;
 int exitCoordX = 550;
 int exitCoordY = 25;
 
-#include "gfx/backgrounds/blank_kbd.h"
-#include "gfx/backgrounds/settings_background.h"
-#include "gfx/backgrounds/credits_bg.h"
+
 
 
 #include "keyboard_texture_coords.h" //contains all the button's coordinates (x+y) and the #include's
@@ -121,6 +122,11 @@ int exitCoordY = 25;
 
 #include "sounds.h"
 
+#include "wiimote_vibration.h"
+
+
+//this small function checks if the cursor is 'on' a texture(this texture can be a button for example)
+//, it returns true if the first texture is on the second one. The first texture is the cursor and the second may be a button
 bool collisionButton(int button_CoordX, int button_coordY, int cursorPosX,int cursorPosY){
 	if(GRRLIB_RectOnRect(button_CoordX,button_coordY,buttonWidth,buttonHeight,cursorPosX,cursorPosY,5,5)){ //64,64 too much
 		return true;
@@ -128,7 +134,6 @@ bool collisionButton(int button_CoordX, int button_coordY, int cursorPosX,int cu
 }
 
 GRRLIB_texImg *tex_cursor_png; //initialises *tex_cursor_png to use on updatecursorpos()
-
 
 int threshold = 10;
 int sensitivity = 15;
@@ -174,7 +179,7 @@ void updatecursorpos(){
 				nx = e.nunchuk.js.pos.x - e.nunchuk.js.center.x;
 				ny = e.nunchuk.js.pos.y - e.nunchuk.js.center.y;
 			} else {
-				nx=0;
+				nx=0; //reset the x&y positions of the nunchuck stick. You may be thinking 'well if it's not plugged in, how could the value be different from 0??' well, if you plug the nunchuck in, push the stick a little, then unplug it at the same time, the last X&Y values will stay.
 				ny=0;
 			}
 			
@@ -193,74 +198,8 @@ void updatecursorpos(){
 extern "C" {extern void exit(int status);}
 
 
+#include "isfs_readwrite.h"
 
-static fstats stats ATTRIBUTE_ALIGN(32);
-
-u8 *ISFS_GetFile(u8 *path, u32 *size, s32 length){
-	
-	*size = 0;
-	
-	s32 fd = ISFS_Open((const char *)path, ISFS_OPEN_READ);
-		u8 *buf = NULL;
-
-		if(fd >= 0)
-		{
-			memset(&stats, 0, sizeof(fstats));
-			if(ISFS_GetFileStats(fd, &stats) >= 0)
-			{
-				if(length <= 0)
-					length = stats.file_length;
-				if(length > 0)
-					buf = (u8 *)memalign(32, length);
-				if(buf)
-				{
-					*size = stats.file_length;
-					if(ISFS_Read(fd, (char*)buf, length) != length){
-						*size = 0;
-						free(buf);
-					}
-				}
-			}
-		ISFS_Close(fd);
-		}
-
-		if(*size > 0)
-		{	
-			DCFlushRange(buf, *size);
-			ICInvalidateRange(buf, *size);
-		}
-		return buf;
-}
-
-u8 *ISFS_WRITE_CONFIGDAT(u8 *buf2){ 
-	s32 fd2 = ISFS_Open(ISFS_CONFIGDAT_PATH, ISFS_OPEN_WRITE); //opens config.dat on the nand. Write mode
-	if(fd2<0) //negative = error so we show what error it is
-	{
-		//printf("Failed to open, error %d\n", fd2);
-		//sleep(5);
-		exit(0);
-	}
-	else //everything's fine:
-	{
-		//printf("opened isfs \n");
-		//sleep(5);
-		s32 ret = ISFS_Write(fd2, buf2, 7004);
-		if(ret<0){ //like before, under 0 is an error code so we show it.
-			//printf("Error %d \n", ret);
-					//sleep(5);
-					exit(0);
-		}
-		//printf("isfs write ok \n");
-		//sleep(5);
-		/*free(buf2);
-		printf("buf2 freed \n");
-		sleep(5);*/
-		ISFS_Close(fd2);
-		//printf("ISFS closed \n");
-		//sleep(5);
-	}
-	return 0;
-}
 
 char lengthtoHex(int text_length){ //this function takes the length of the new SSID and returns a hex value.
 	
@@ -370,31 +309,6 @@ char lengthtoHex(int text_length){ //this function takes the length of the new S
 
 
 
-////////////////////for vibration of the wiimote://///////////////////////
-
-static syswd_t wiirumble = SYS_WD_NULL;
-
-static void wiirumble_callback(syswd_t wiirumble, void *cb_arg){
-    WPAD_Rumble(WPAD_CHAN_0,0); //stops the vibration
-}
-
-void wiirumble_init(void){SYS_CreateAlarm(&wiirumble);}
-
-void wiirumble_set(int sec,int millisec){	
-	WPAD_Rumble(WPAD_CHAN_0,1); //starts vibrating
-
-    struct timespec tv;
-
-    tv.tv_sec  = sec;
-    tv.tv_nsec = millisec*1000000; //convert ms to ns (ms*1000000) = ns
-	
-    SYS_SetAlarm(wiirumble, &tv, wiirumble_callback, NULL);
-}
-
-int vib_duration1 = 100;
-int vib_duration2 = 50;
-
-/////////////////////////////////////////////////////////
 
 char SSIDkeyboard_writtentext[33] = "";
 	int SSID_indexkeyboard = 0;
@@ -435,7 +349,7 @@ void kbd_backspace(int keyboard_type){//keyboard_type : 0= SSID keyboard | 1=Pas
 		} else maxsound();
 		
 	} else{ //must be 1 if it's not 0, right?
-		if (Password_indexkeyboard>0 ) { //you don't want that number to get negative lol 		
+		if (Password_indexkeyboard>0 ) { 	
 			Passwordkeyboard_writtentext[Password_indexkeyboard-1] = '\0'; //erases the character
 			Password_indexkeyboard-=1;
 			erasesound();
@@ -448,8 +362,8 @@ void kbd_backspace(int keyboard_type){//keyboard_type : 0= SSID keyboard | 1=Pas
 
 
 
-//this small function tests if your wifi works.
-s32 WIFI_CONNECTION_TEST(){ //false=couldn't connect, true = working
+//this small function tests if your wifi works. unused for now because it needs to reboot in order for the changes to take effect
+s32 WIFI_CONNECTION_TEST(){
 	char ip_address[16]="";
     char network_mask[16]="";
     char network_gateaway[16]="";
@@ -497,14 +411,29 @@ char password_secondline[63-45]; //63= max length of password
 float kbd_button_Xsize = 1.0;
 float kbd_button_Ysize = 1.0;
 
+#include "gfx/backgrounds/blank_kbd.h"
+#include "gfx/backgrounds/settings_background.h"
+#include "gfx/backgrounds/credits_bg.h"
+
+
+bool CusorOnKey(int key_coordX,int key_coordY,int key_width,int key_height){
+if(GRRLIB_RectOnRect(key_coordX,key_coordY,key_width,key_height,cursor_positionX, cursor_positionY,5,5)){return true;} else{return false;}
+}
+
+
+
+
+
 //main function:
 int main() {
+		GRRLIB_Init();
+
 		wiirumble_init();
 
 			char SSID1[32];
 			char PASSWORD1[63];//from index 0 to 62 = password(password max 63chars long) | character 63 is the terminating character \0
 			
-    GRRLIB_Init();
+    
 	
 	PAD_Init();
     WPAD_Init();
@@ -514,7 +443,6 @@ int main() {
     ASND_Pause(0);
 	track = ASND_GetFirstUnusedVoice();
 	
-
 	GRRLIB_texImg *tex_poweroff_png = GRRLIB_LoadTexture(poweroff);
     GRRLIB_InitTileSet(tex_poweroff_png, 640, 480, 0); 
 	
@@ -801,12 +729,8 @@ int main() {
 	GRRLIB_texImg *tex_selected_png = GRRLIB_LoadTexture(selected);
     GRRLIB_InitTileSet(tex_selected_png, 392, 68, 0); 
 	
-	
-	
-	
 
 	
-	//test crash:
 		
 		FILE *file_r=NULL;
     char buf_fileread[CONFIGDAT_FILELENGTH]="";
@@ -815,18 +739,12 @@ int main() {
 		
 	ISFS_Initialize();
 	
-	char filepath[ISFS_MAXPATH] ATTRIBUTE_ALIGN(32); //not the cause of crash
+	char filepath[ISFS_MAXPATH] ATTRIBUTE_ALIGN(32); 
 
 	sprintf(filepath, ISFS_CONFIGDAT_PATH); 
 	u32 certSize = 0;
 	u8 *certBuffer = ISFS_GetFile((u8*)&filepath, &certSize, -1);
-	if(certSize == 0 || certBuffer == NULL)
-	{
-		exit(0);
-	}
-//end test crash
-
-//final debug edit: crash was located in this code. moving it before mainmenu: fixed the issue. possible cause = initializing something multilpe times when it's already used.
+	if(certSize == 0 || certBuffer == NULL) exit(0);
 
 	
 	
@@ -859,20 +777,20 @@ int main() {
 			char connection1_securitytype = certBuffer[connection1_securitypos];
 			
 			
-			int NewSelectedNetwork = 1; //goes from 1 to 3.
+			int NewSelectedNetwork = 1; //goes from 1 to 3. for now it's set to one but it will be eventually be possible to select your own network
 			//writes the modified selected network in certBuffer
 			if (NewSelectedNetwork==1){
-				certBuffer[connection1_selectpos] = connection_selectedchar; 
-				certBuffer[connection2_selectpos] = connection_unselectedchar;
-				certBuffer[connection3_selectpos] = connection_unselectedchar;
+				certBuffer[connection1_selectpos] = connection_wireless_selectedchar; 
+				certBuffer[connection2_selectpos] = connection_wireless_unselectedchar;
+				certBuffer[connection3_selectpos] = connection_wireless_unselectedchar;
 			}else if (NewSelectedNetwork==2){
-				certBuffer[connection1_selectpos] = connection_unselectedchar;
-				certBuffer[connection2_selectpos] = connection_selectedchar;
-				certBuffer[connection3_selectpos] = connection_unselectedchar;
+				certBuffer[connection1_selectpos] = connection_wireless_unselectedchar;
+				certBuffer[connection2_selectpos] = connection_wireless_selectedchar;
+				certBuffer[connection3_selectpos] = connection_wireless_unselectedchar;
 			}else if (NewSelectedNetwork==3){
-				certBuffer[connection1_selectpos] = connection_unselectedchar;
-				certBuffer[connection2_selectpos] = connection_unselectedchar;
-				certBuffer[connection3_selectpos] = connection_selectedchar;
+				certBuffer[connection1_selectpos] = connection_wireless_unselectedchar;
+				certBuffer[connection2_selectpos] = connection_wireless_unselectedchar;
+				certBuffer[connection3_selectpos] = connection_wireless_selectedchar;
 			}
 	
 	while (1){ //main menu
@@ -988,12 +906,16 @@ int main() {
 	///////////////////////////////////Keyboard for SSID://////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	SSIDkeyboard:
+	
     while(1) { //keyboard for SSID. max 32 characters
+	int collision_sizex = 5;
+	int collision_sizey = 5;
         updatecursorpos();
 	
 				GRRLIB_DrawImg(0, 0, tex_blank_kbd_png, 0, 1, 1, GRRLIB_WHITE);  //shows the keyboard on screen
 
 					//draw numbers:
+				//GRRLIB_DrawImg(one_coordX-10, one_coordY-10, tex_one_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
 				GRRLIB_DrawImg(one_coordX, one_coordY, tex_one_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				GRRLIB_DrawImg(two_coordX, two_coordY, tex_two_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				GRRLIB_DrawImg(three_coordX, three_coordY, tex_three_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
@@ -1008,6 +930,7 @@ int main() {
 				
 				//draw letters:
 				if (SSID_uppercase==false){ //lowercase letters:
+					
 					GRRLIB_DrawImg(bta_coordX, bta_coordY, tex_bta_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 					GRRLIB_DrawImg(btb_coordX, btb_coordY, tex_btb_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 					GRRLIB_DrawImg(btc_coordX, btc_coordY, tex_btc_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
@@ -1106,8 +1029,7 @@ int main() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				//this part determines which character was clicked:
 				
-	int collision_sizex = 5;
-	int collision_sizey = 5;
+	
 	
 	SSIDkeyboard_writtentext[33] = '\0';
 
@@ -1468,9 +1390,7 @@ int main() {
 			}else if (collisionButton(button1CoordX, button1CoordY, cursor_positionX,cursor_positionY) == true){				
 						buttonsound1();
 						wiirumble_set(0,vib_duration1);
-						clearkeyboard(1); //not the cause of crash
-						//free(certBuffer);
-						//ISFS_Deinitialize();
+						clearkeyboard(1); 
 						goto mainmenu; //goes back to the menu without saving
 			}else if (collisionButton(button3CoordX, button3CoordY, cursor_positionX,cursor_positionY) == true){ //save button				
 						buttonsound1();
@@ -1481,6 +1401,10 @@ int main() {
 						}
 						certBuffer[SSID1_pos+33] =  lengthtoHex(SSID_indexkeyboard);// this must be the length of the new SSID. example : 0x03 = three characters long | 0x20 = 32 characters.
 						ISFS_WRITE_CONFIGDAT(certBuffer);
+						
+						clearkeyboard(1);  
+						goto mainmenu; //goes back to the menu after saving everything
+						
 						}
 			
 		} 	
@@ -1493,7 +1417,233 @@ int main() {
 				GRRLIB_DrawImg(button3CoordX, button3CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
 				GRRLIB_Printf((button3CoordX+buttonWidth/2)-20, (button1CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Save");
 
+
+
+				if (CusorOnKey(bta_coordX,bta_coordY,44,36)==true){
+					if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(bta_coordX-10, bta_coordY-10, tex_bta_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					}else GRRLIB_DrawImg(bta_coordX-10, bta_coordY-10, tex_bta_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(btb_coordX,btb_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btb_coordX-10, btb_coordY-10, tex_btb_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					   }else  GRRLIB_DrawImg(btb_coordX-10, btb_coordY-10, tex_btb_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btc_coordX,btc_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btc_coordX-10, btc_coordY-10, tex_btc_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+						}else GRRLIB_DrawImg(btc_coordX-10, btc_coordY-10, tex_btc_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+						
+				}
+				else if (CusorOnKey(btd_coordX,btd_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btd_coordX-10, btd_coordY-10, tex_btd_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(btd_coordX-10, btd_coordY-10, tex_btd_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bte_coordX,bte_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(bte_coordX-10, bte_coordY-10, tex_bte_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(bte_coordX-10, bte_coordY-10, tex_bte_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btf_coordX,btf_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btf_coordX-10, btf_coordY-10, tex_btf_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(btf_coordX-10, btf_coordY-10, tex_btf_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btg_coordX,btg_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btg_coordX-10, btg_coordY-10, tex_btg_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(btg_coordX-10, btg_coordY-10, tex_btg_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bth_coordX,bth_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(bth_coordX-10, bth_coordY-10, tex_bth_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(bth_coordX-10, bth_coordY-10, tex_bth_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bti_coordX,bti_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(bti_coordX-10, bti_coordY-10, tex_bti_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bti_coordX-10, bti_coordY-10, tex_bti_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btj_coordX,btj_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btj_coordX-10, btj_coordY-10, tex_btj_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btj_coordX-10, btj_coordY-10, tex_btj_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btk_coordX,btk_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btk_coordX-10, btk_coordY-10, tex_btk_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btk_coordX-10, btk_coordY-10, tex_btk_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btl_coordX,btl_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btl_coordX-10, btl_coordY-10, tex_btl_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btl_coordX-10, btl_coordY-10, tex_btl_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btm_coordX,btm_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btm_coordX-10, btm_coordY-10, tex_btm_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btm_coordX-10, btm_coordY-10, tex_btm_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btn_coordX,btn_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btn_coordX-10, btn_coordY-10, tex_btn_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btn_coordX-10, btn_coordY-10, tex_btn_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bto_coordX,bto_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(bto_coordX-10, bto_coordY-10, tex_bto_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bto_coordX-10, bto_coordY-10, tex_bto_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btp_coordX,btp_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btp_coordX-10, btp_coordY-10, tex_btp_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btp_coordX-10, btp_coordY-10, tex_btp_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btq_coordX,btq_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btq_coordX-10, btq_coordY-10, tex_btq_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btq_coordX-10, btq_coordY-10, tex_btq_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btr_coordX,btr_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btr_coordX-10, btr_coordY-10, tex_btr_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btr_coordX-10, btr_coordY-10, tex_btr_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bts_coordX,bts_coordY,44,36)==true){
+				if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(bts_coordX-10, bts_coordY-10, tex_bts_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bts_coordX-10, bts_coordY-10, tex_bts_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btt_coordX,btt_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btt_coordX-10, btt_coordY-10, tex_btt_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btt_coordX-10, btt_coordY-10, tex_btt_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btu_coordX,btu_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btu_coordX-10, btu_coordY-10, tex_btu_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btu_coordX-10, btu_coordY-10, tex_btu_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btv_coordX,btv_coordY,44,36)==true){
+					if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btv_coordX-10, btv_coordY-10, tex_btv_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					}else GRRLIB_DrawImg(btv_coordX-10, btv_coordY-10, tex_btv_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
 				
+				else if (CusorOnKey(btw_coordX,btw_coordY,44,36)==true){
+					  if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btw_coordX-10, btw_coordY-10, tex_btw_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					}else GRRLIB_DrawImg(btw_coordX-10, btw_coordY-10, tex_btw_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				
+				else if (CusorOnKey(btx_coordX,btx_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btx_coordX-10, btx_coordY-10, tex_btx_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btx_coordX-10, btx_coordY-10, tex_btx_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bty_coordX,bty_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(bty_coordX-10, bty_coordY-10, tex_bty_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bty_coordX-10, bty_coordY-10, tex_bty_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btz_coordX,btz_coordY,44,36)==true){
+					   if (SSID_uppercase==false){
+					   GRRLIB_DrawImg(btz_coordX-10, btz_coordY-10, tex_btz_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btz_coordX-10, btz_coordY-10, tex_btz_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(zero_coordX,zero_coordY,44,36)==true){
+					   GRRLIB_DrawImg(zero_coordX-10, zero_coordY-10, tex_zero_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(one_coordX,one_coordY,44,36)==true){
+					   GRRLIB_DrawImg(one_coordX-10, one_coordY-10, tex_one_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(two_coordX,two_coordY,44,36)==true){
+					   GRRLIB_DrawImg(two_coordX-10, two_coordY-10, tex_two_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(three_coordX,three_coordY,44,36)==true){
+					   GRRLIB_DrawImg(three_coordX-10, three_coordY-10, tex_three_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(four_coordX,four_coordY,44,36)==true){
+					   GRRLIB_DrawImg(four_coordX-10, four_coordY-10, tex_four_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(five_coordX,five_coordY,44,36)==true){
+					   GRRLIB_DrawImg(five_coordX-10, five_coordY-10, tex_five_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(six_coordX,six_coordY,44,36)==true){
+					   GRRLIB_DrawImg(six_coordX-10, six_coordY-10, tex_six_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(seven_coordX,seven_coordY,44,36)==true){
+					   GRRLIB_DrawImg(seven_coordX-10, seven_coordY-10, tex_seven_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(eight_coordX,eight_coordY,44,36)==true){
+					   GRRLIB_DrawImg(eight_coordX-10, eight_coordY-10, tex_eight_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(nine_coordX,nine_coordY,44,36)==true){
+					   GRRLIB_DrawImg(nine_coordX-10, nine_coordY-10, tex_nine_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(bracket_1_coordX,bracket_1_coordY,44,36)==true){
+					   GRRLIB_DrawImg(bracket_1_coordX-10, bracket_1_coordY-10, tex_bracket_1_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(bracket_2_coordX,bracket_2_coordY,44,36)==true){
+					   GRRLIB_DrawImg(bracket_2_coordX-10, bracket_2_coordY-10, tex_bracket_2_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(backslash_coordX,backslash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(backslash_coordX-10, backslash_coordY-10, tex_backslash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(slash_coordX,slash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(slash_coordX-10, slash_coordY-10, tex_slash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(apostrophe_coordX,apostrophe_coordY,44,36)==true){
+					   GRRLIB_DrawImg(apostrophe_coordX-10, apostrophe_coordY-10, tex_apostrophe_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(hash_coordX,hash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(hash_coordX-10, hash_coordY-10, tex_hash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(comma_coordX,comma_coordY,44,36)==true){
+					   GRRLIB_DrawImg(comma_coordX-10, comma_coordY-10, tex_comma_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(point_coordX,point_coordY,44,36)==true){
+					   GRRLIB_DrawImg(point_coordX-10, point_coordY-10, tex_point_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(equal_coordX,equal_coordY,44,36)==true){
+					   GRRLIB_DrawImg(equal_coordX-10, equal_coordY-10, tex_equal_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(equal_coordX,equal_coordY,44,36)==true){
+					   GRRLIB_DrawImg(equal_coordX-10, equal_coordY-10, tex_equal_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(semicolon_coordX,semicolon_coordY,44,36)==true){
+					   GRRLIB_DrawImg(semicolon_coordX-10, semicolon_coordY-10, tex_semicolon_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(dash_coordX,dash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(dash_coordX-10, dash_coordY-10, tex_dash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+	
+					
+
+
+
 				GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE);
 		
 			
@@ -1997,6 +2147,11 @@ int main() {
 						for (int i=0;i<=62;i++){certBuffer[PASSWORD1_pos + i] = Passwordkeyboard_writtentext[i];}//replaces password in buf_fileread
 			
 						ISFS_WRITE_CONFIGDAT(certBuffer); 	
+						
+						clearkeyboard(2); 
+						goto mainmenu; //goes back to the menu after saving everything
+						
+						
 			}	
 		} 	
 
@@ -2007,6 +2162,229 @@ int main() {
 				
 				GRRLIB_DrawImg(button3CoordX, button3CoordY, tex_button1_png, 0, 1, 1, GRRLIB_WHITE);  
 				GRRLIB_Printf((button3CoordX+buttonWidth/2)-20, (button1CoordY+buttonHeight/2)-5, tex_BMfont5, GRRLIB_BLACK, 1, "Save");
+
+
+if (CusorOnKey(bta_coordX,bta_coordY,44,36)==true){
+					if (Password_uppercase==false){
+					   GRRLIB_DrawImg(bta_coordX-10, bta_coordY-10, tex_bta_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					}else GRRLIB_DrawImg(bta_coordX-10, bta_coordY-10, tex_bta_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(btb_coordX,btb_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btb_coordX-10, btb_coordY-10, tex_btb_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					   }else  GRRLIB_DrawImg(btb_coordX-10, btb_coordY-10, tex_btb_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btc_coordX,btc_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btc_coordX-10, btc_coordY-10, tex_btc_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+						}else GRRLIB_DrawImg(btc_coordX-10, btc_coordY-10, tex_btc_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+						
+				}
+				else if (CusorOnKey(btd_coordX,btd_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btd_coordX-10, btd_coordY-10, tex_btd_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(btd_coordX-10, btd_coordY-10, tex_btd_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bte_coordX,bte_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(bte_coordX-10, bte_coordY-10, tex_bte_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(bte_coordX-10, bte_coordY-10, tex_bte_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btf_coordX,btf_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btf_coordX-10, btf_coordY-10, tex_btf_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(btf_coordX-10, btf_coordY-10, tex_btf_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btg_coordX,btg_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btg_coordX-10, btg_coordY-10, tex_btg_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(btg_coordX-10, btg_coordY-10, tex_btg_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bth_coordX,bth_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(bth_coordX-10, bth_coordY-10, tex_bth_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else 					   GRRLIB_DrawImg(bth_coordX-10, bth_coordY-10, tex_bth_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bti_coordX,bti_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(bti_coordX-10, bti_coordY-10, tex_bti_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bti_coordX-10, bti_coordY-10, tex_bti_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btj_coordX,btj_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btj_coordX-10, btj_coordY-10, tex_btj_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btj_coordX-10, btj_coordY-10, tex_btj_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btk_coordX,btk_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btk_coordX-10, btk_coordY-10, tex_btk_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btk_coordX-10, btk_coordY-10, tex_btk_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btl_coordX,btl_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btl_coordX-10, btl_coordY-10, tex_btl_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btl_coordX-10, btl_coordY-10, tex_btl_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btm_coordX,btm_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btm_coordX-10, btm_coordY-10, tex_btm_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btm_coordX-10, btm_coordY-10, tex_btm_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btn_coordX,btn_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btn_coordX-10, btn_coordY-10, tex_btn_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btn_coordX-10, btn_coordY-10, tex_btn_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bto_coordX,bto_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(bto_coordX-10, bto_coordY-10, tex_bto_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bto_coordX-10, bto_coordY-10, tex_bto_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btp_coordX,btp_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btp_coordX-10, btp_coordY-10, tex_btp_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btp_coordX-10, btp_coordY-10, tex_btp_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btq_coordX,btq_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btq_coordX-10, btq_coordY-10, tex_btq_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btq_coordX-10, btq_coordY-10, tex_btq_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btr_coordX,btr_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btr_coordX-10, btr_coordY-10, tex_btr_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btr_coordX-10, btr_coordY-10, tex_btr_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bts_coordX,bts_coordY,44,36)==true){
+				if (Password_uppercase==false){
+					   GRRLIB_DrawImg(bts_coordX-10, bts_coordY-10, tex_bts_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bts_coordX-10, bts_coordY-10, tex_bts_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btt_coordX,btt_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btt_coordX-10, btt_coordY-10, tex_btt_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btt_coordX-10, btt_coordY-10, tex_btt_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btu_coordX,btu_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btu_coordX-10, btu_coordY-10, tex_btu_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btu_coordX-10, btu_coordY-10, tex_btu_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btv_coordX,btv_coordY,44,36)==true){
+					if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btv_coordX-10, btv_coordY-10, tex_btv_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					}else GRRLIB_DrawImg(btv_coordX-10, btv_coordY-10, tex_btv_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				
+				else if (CusorOnKey(btw_coordX,btw_coordY,44,36)==true){
+					  if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btw_coordX-10, btw_coordY-10, tex_btw_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+					}else GRRLIB_DrawImg(btw_coordX-10, btw_coordY-10, tex_btw_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				
+				else if (CusorOnKey(btx_coordX,btx_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btx_coordX-10, btx_coordY-10, tex_btx_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btx_coordX-10, btx_coordY-10, tex_btx_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(bty_coordX,bty_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(bty_coordX-10, bty_coordY-10, tex_bty_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(bty_coordX-10, bty_coordY-10, tex_bty_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+
+				}
+				else if (CusorOnKey(btz_coordX,btz_coordY,44,36)==true){
+					   if (Password_uppercase==false){
+					   GRRLIB_DrawImg(btz_coordX-10, btz_coordY-10, tex_btz_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}else GRRLIB_DrawImg(btz_coordX-10, btz_coordY-10, tex_btz_UP_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(zero_coordX,zero_coordY,44,36)==true){
+					   GRRLIB_DrawImg(zero_coordX-10, zero_coordY-10, tex_zero_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(one_coordX,one_coordY,44,36)==true){
+					   GRRLIB_DrawImg(one_coordX-10, one_coordY-10, tex_one_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(two_coordX,two_coordY,44,36)==true){
+					   GRRLIB_DrawImg(two_coordX-10, two_coordY-10, tex_two_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(three_coordX,three_coordY,44,36)==true){
+					   GRRLIB_DrawImg(three_coordX-10, three_coordY-10, tex_three_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(four_coordX,four_coordY,44,36)==true){
+					   GRRLIB_DrawImg(four_coordX-10, four_coordY-10, tex_four_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(five_coordX,five_coordY,44,36)==true){
+					   GRRLIB_DrawImg(five_coordX-10, five_coordY-10, tex_five_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(six_coordX,six_coordY,44,36)==true){
+					   GRRLIB_DrawImg(six_coordX-10, six_coordY-10, tex_six_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(seven_coordX,seven_coordY,44,36)==true){
+					   GRRLIB_DrawImg(seven_coordX-10, seven_coordY-10, tex_seven_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(eight_coordX,eight_coordY,44,36)==true){
+					   GRRLIB_DrawImg(eight_coordX-10, eight_coordY-10, tex_eight_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(nine_coordX,nine_coordY,44,36)==true){
+					   GRRLIB_DrawImg(nine_coordX-10, nine_coordY-10, tex_nine_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(bracket_1_coordX,bracket_1_coordY,44,36)==true){
+					   GRRLIB_DrawImg(bracket_1_coordX-10, bracket_1_coordY-10, tex_bracket_1_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(bracket_2_coordX,bracket_2_coordY,44,36)==true){
+					   GRRLIB_DrawImg(bracket_2_coordX-10, bracket_2_coordY-10, tex_bracket_2_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(backslash_coordX,backslash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(backslash_coordX-10, backslash_coordY-10, tex_backslash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(slash_coordX,slash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(slash_coordX-10, slash_coordY-10, tex_slash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(apostrophe_coordX,apostrophe_coordY,44,36)==true){
+					   GRRLIB_DrawImg(apostrophe_coordX-10, apostrophe_coordY-10, tex_apostrophe_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(hash_coordX,hash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(hash_coordX-10, hash_coordY-10, tex_hash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(comma_coordX,comma_coordY,44,36)==true){
+					   GRRLIB_DrawImg(comma_coordX-10, comma_coordY-10, tex_comma_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(point_coordX,point_coordY,44,36)==true){
+					   GRRLIB_DrawImg(point_coordX-10, point_coordY-10, tex_point_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(equal_coordX,equal_coordY,44,36)==true){
+					   GRRLIB_DrawImg(equal_coordX-10, equal_coordY-10, tex_equal_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(equal_coordX,equal_coordY,44,36)==true){
+					   GRRLIB_DrawImg(equal_coordX-10, equal_coordY-10, tex_equal_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(semicolon_coordX,semicolon_coordY,44,36)==true){
+					   GRRLIB_DrawImg(semicolon_coordX-10, semicolon_coordY-10, tex_semicolon_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+				else if (CusorOnKey(dash_coordX,dash_coordY,44,36)==true){
+					   GRRLIB_DrawImg(dash_coordX-10, dash_coordY-10, tex_dash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
+
 
 				
 				GRRLIB_DrawImg(cursor_positionX, cursor_positionY, tex_cursor_png, cursor_rotation_angle, 0.5, 0.5, GRRLIB_WHITE); 
