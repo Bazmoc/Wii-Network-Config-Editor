@@ -2,8 +2,6 @@
 Those functions are used for reading and writing to the NAND(isfs)
 */
 
-
-
 static fstats stats ATTRIBUTE_ALIGN(32);
 
 u8 *ISFS_GetFile(u8 *path, u32 *size, s32 length){
