@@ -70,6 +70,7 @@ This file contains all the required stuff for the on-screen keyboard. #includes,
 #include "gfx/keyboard/numbers/nine.h"
 //symbols:
 #include "gfx/keyboard/other/dash.h"
+#include "gfx/keyboard/other/underscore.h" //added at v1.4
 #include "gfx/keyboard/other/erase.h"
 #include "gfx/keyboard/other/caps.h"
 #include "gfx/keyboard/other/caps_colored.h"
@@ -89,7 +90,7 @@ This file contains all the required stuff for the on-screen keyboard. #includes,
 
 
 //line 0 = 1 2 3 4 5 6 7 8 9 0 - ERASE
-//line 1 = q w e r t y u i o p
+//line 1 = q w e r t y u i o p _
 //line 2 = CAPS - a s d f g h j k l ;
 //line 3 = z x c v b n m , . =
 //line 4 = ¥ € [ ] SPACE \ / ' #
@@ -161,6 +162,7 @@ int eight_coordX = 30+(48*7), eight_coordY = line0_y;
 int nine_coordX = 30+(48*8), nine_coordY = line0_y;
 int zero_coordX = 30+(48*9), zero_coordY = line0_y;
 int dash_coordX = 30+(48*10), dash_coordY = line0_y;
+int underscore_coordX = btq_coordX + (46*10), underscore_coordY = line1_y; //added at v1.4
 int erase_coordX = 30+(48*11), erase_coordY = line0_y;
 int erase_width = 76, erase_height = 36;
 int caps_width = 92, caps_height = 36;

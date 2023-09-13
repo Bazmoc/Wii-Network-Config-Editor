@@ -578,11 +578,14 @@ int main(int argc,char** argv) {
 	GRRLIB_texImg *tex_dash_png = GRRLIB_LoadTexture(dash);
     GRRLIB_InitTileSet(tex_dash_png, 48, 40, 0); 
 	
-	GRRLIB_texImg *tex_yen_png = GRRLIB_LoadTexture(yen);
+	GRRLIB_texImg *tex_underscore_png = GRRLIB_LoadTexture(underscore); //added v1.4
+    GRRLIB_InitTileSet(tex_underscore_png, 44, 36, 0); 
+	
+	/*GRRLIB_texImg *tex_yen_png = GRRLIB_LoadTexture(yen); removed because png font doesn't support it.
     GRRLIB_InitTileSet(tex_yen_png, 44, 36, 0); 
 	
 	GRRLIB_texImg *tex_euro_png = GRRLIB_LoadTexture(euro);
-    GRRLIB_InitTileSet(tex_euro_png, 44, 36, 0); 
+    GRRLIB_InitTileSet(tex_euro_png, 44, 36, 0); */
 	
 	GRRLIB_texImg *tex_bracket_1_png = GRRLIB_LoadTexture(bracket_1);
     GRRLIB_InitTileSet(tex_bracket_1_png, 44, 36, 0); 
@@ -883,6 +886,7 @@ if(chosenmenu==1){
 				GRRLIB_DrawImg(nine_coordX, nine_coordY, tex_nine_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				GRRLIB_DrawImg(zero_coordX, zero_coordY, tex_zero_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				GRRLIB_DrawImg(dash_coordX, dash_coordY, tex_dash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+				GRRLIB_DrawImg(underscore_coordX, underscore_coordY, tex_underscore_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				
 				//draw letters:
 				if (SSID_uppercase==false){ //lowercase letters:
@@ -1253,6 +1257,13 @@ if(chosenmenu==1){
 				presssound();
 			}else maxsound();
 			wiirumble_set(0,vib_duration2);
+		}else if(GRRLIB_RectOnRect(underscore_coordX,underscore_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
+			if (SSID_indexkeyboard<=31) { 
+				SSIDkeyboard_writtentext[SSID_indexkeyboard] = '_';
+				SSID_indexkeyboard+=1;
+				presssound();
+			}else maxsound();
+			wiirumble_set(0,vib_duration2);
 		}else if(GRRLIB_RectOnRect(bracket_1_coordX,bracket_1_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
 			if (SSID_indexkeyboard<=31) { 
 				SSIDkeyboard_writtentext[SSID_indexkeyboard] = '[';
@@ -1585,6 +1596,9 @@ if(chosenmenu==1){
 				else if (CusorOnKey(dash_coordX,dash_coordY,44,36)==true){
 					   GRRLIB_DrawImg(dash_coordX-10, dash_coordY-10, tex_dash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
 				}
+				else if (CusorOnKey(underscore_coordX,underscore_coordY,44,36)==true){
+					   GRRLIB_DrawImg(underscore_coordX-10, underscore_coordY-10, tex_underscore_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
 	
 					
 
@@ -1629,6 +1643,7 @@ while(chosenmenu==2){//keyboard for password. max 63 characters
 				GRRLIB_DrawImg(nine_coordX, nine_coordY, tex_nine_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				GRRLIB_DrawImg(zero_coordX, zero_coordY, tex_zero_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				GRRLIB_DrawImg(dash_coordX, dash_coordY, tex_dash_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
+				GRRLIB_DrawImg(underscore_coordX, underscore_coordY, tex_underscore_png, 0, kbd_button_Xsize, kbd_button_Ysize, GRRLIB_WHITE);
 				
 				//draw letters:
              	if (Password_uppercase==false){
@@ -1996,6 +2011,13 @@ while(chosenmenu==2){//keyboard for password. max 63 characters
 		} else if(GRRLIB_RectOnRect(dash_coordX,dash_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
 			if (Password_indexkeyboard<=62) { 
 			Passwordkeyboard_writtentext[Password_indexkeyboard] = '-';
+			Password_indexkeyboard+=1;
+			presssound();
+			} else maxsound();
+			wiirumble_set(0,vib_duration2);
+		}else if(GRRLIB_RectOnRect(underscore_coordX,underscore_coordY,44,36,cursor_positionX, cursor_positionY,collision_sizex,collision_sizey)){
+			if (Password_indexkeyboard<=62) { 
+			Passwordkeyboard_writtentext[Password_indexkeyboard] = '_';
 			Password_indexkeyboard+=1;
 			presssound();
 			} else maxsound();
@@ -2368,6 +2390,9 @@ while(chosenmenu==2){//keyboard for password. max 63 characters
 				else if (CusorOnKey(dash_coordX,dash_coordY,44,36)==true){
 					   GRRLIB_DrawImg(dash_coordX-10, dash_coordY-10, tex_dash_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
 				}
+				else if (CusorOnKey(underscore_coordX,underscore_coordY,44,36)==true){
+					   GRRLIB_DrawImg(underscore_coordX-10, underscore_coordY-10, tex_underscore_png, 0, kbd_button_Xsize+0.5, kbd_button_Ysize+0.5, GRRLIB_WHITE);
+				}
 
 
 				
@@ -2615,7 +2640,7 @@ if (chosenmenu==5){
 		
 		GRRLIB_Printf(280, 25, tex_BMfont5, GRRLIB_WHITE, 1.5, "Credits"); //title
 		
-		GRRLIB_Printf(50, 100, tex_BMfont5, GRRLIB_WHITE, 1, "Wii Network Config Editor v1.3 made by Bazmoc"); //title
+		GRRLIB_Printf(50, 100, tex_BMfont5, GRRLIB_WHITE, 1, "Wii Network Config Editor v1.4 made by Bazmoc"); //title
 		GRRLIB_Printf(50, 125, tex_BMfont5, GRRLIB_WHITE, 1, "Download the latest versions at https://github.com/Bazmoc"); //title
 		GRRLIB_Printf(50, 150, tex_BMfont5, GRRLIB_WHITE, 1, "If you have any questions or issues contact me on discord : @bazmoc"); //title
 		GRRLIB_Printf(50, 200, tex_BMfont5, GRRLIB_WHITE, 1, "Press B to go back."); //title
